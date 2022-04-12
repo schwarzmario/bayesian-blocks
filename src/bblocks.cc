@@ -46,19 +46,21 @@ int main(int argc, char** argv) {
     std::string progname(argv[0]);
 
     auto usage = [&]() {
-        std::cerr << "USAGE: " << progname << " [-v|--verbose] [-h|--help] [--p0 <val> (default 0.01)] file1 file2 ...\n";
+        std::cerr << "USAGE: " << progname << " [-v|--verbose] [-h|--help] [-n|--norescale] [--p0 <val> (default 0.01)] file1 file2 ...\n";
     };
 
-    const char* const short_opts = ":vh";
+    const char* const short_opts = ":vhn";
     const option long_opts[] = {
         { "p0",      required_argument, nullptr, 1   },
         { "verbose", no_argument,       nullptr, 'v' },
         { "help",    no_argument,       nullptr, 'h' },
+        { "norescale",no_argument,      nullptr, 'n' },
         { nullptr,   no_argument,       nullptr, 0   }
     };
 
     // default p0 value
     double p0 = 0.01;
+    bool norescale = false; //i.e. default is scaling of histo entries by bin width post-run
 
     int opt = 0;
     while ((opt = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1) {
@@ -69,6 +71,9 @@ int main(int argc, char** argv) {
             case 'v':
                 level = debug;
                 break;
+            case 'n':
+                norescale = true;
+                break;
             case 'h': // -h or --help
             case '?': // Unrecognized option
             default:
@@ -78,6 +83,7 @@ int main(int argc, char** argv) {
     }
 
     if (p0 != 0.01) glog(debug) << "p0 set to " << p0 << std::endl;
+    if (norescale)  glog(debug) << "Rescaling of histo with bin width disabled" << std::endl;
 
     // extra arguments
     std::vector<std::string> args;
@@ -116,7 +122,7 @@ int main(int argc, char** argv) {
 
                     TH1* hr;
                     try {
-                        hr = dynamic_cast<TH1D*>(BayesianBlocks::rebin(h, p0, false, false));
+                        hr = dynamic_cast<TH1D*>(BayesianBlocks::rebin(h, p0, false, false, !norescale));
                     }
                     catch(const std::exception& e) {
                         if (level <= debug) std::cerr << " \033[91m✘\033[0m " << e.what() << ". Skipping.\n";
